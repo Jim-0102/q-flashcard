@@ -6,6 +6,8 @@
   "author": "Bestian Tang 小巴 <bestian@gmail.com>",
   "private": true,
   "scripts": {
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider quasar dev",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider quasar build -m pwa --modern",
     "lint": "eslint --ext .js,.vue ./",
     "test": "echo \"No test specified\" && exit 0"
   },

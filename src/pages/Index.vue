@@ -11,12 +11,34 @@
         </transition-group>
       </q-card-section>
       <q-card-section v-if="mode=='quiz'">
-        <h3 v-show="s == 0">{{ n1 * n2 }} {{ op }} {{ n2 }}
-        </h3>
-        <h1 v-show="s == 1">{{ ans }}</h1>
+        <div class="quiz-layout">
+          <div class="quiz-question">
+            <h3 v-show="s == 0">
+              <span v-if="op === '÷'">{{ n1 * n2 }} {{ op }} {{ n2 }}</span>
+              <span v-else-if="op === 'gcd'">gcd({{ n1 }}, {{ n2 }})</span>
+              <span v-else>{{ n1 }} {{ op }} {{ n2 }}</span>
+            </h3>
+            <h1 v-show="s == 1">{{ ans }}</h1>
+          </div>
+          <div class="quiz-actions">
+            <q-input
+              class="quiz-input"
+              :autofocus="true"
+              v-show="s === 0"
+              v-model="myAns"
+              :label="$t('enter your answer')"
+            />
+            <q-btn
+              class="quiz-btn"
+              :size="'xl'"
+              color="primary"
+              @click="test()"
+            >
+              {{ s === 0 ? $t('test') : $t('next') }}
+            </q-btn>
+          </div>
+        </div>
       </q-card-section>
-      <q-input :autofocus="true" v-if="mode=='quiz'" v-show="s == 0" v-model="myAns" :label = "$t('enter your answer')"/>
-      <q-btn :size="'xl'" v-if="mode=='quiz'" color="primary" @click="test()">{{ s == 0 ? $t('test') : $t('next') }}</q-btn>
     </q-card>
   </q-page>
 </template>
@@ -115,5 +137,61 @@ export default {
     cursor: pointer;
     width: 66vw;
     text-align: center;
+    max-width: 960px;
+  }
+
+  .quiz-layout {
+    display: flex;
+    align-items: flex-end;
+    gap: 32px;
+    width: 100%;
+  }
+
+  .quiz-question {
+    min-width: 140px;
+    text-align: left;
+  }
+
+  .quiz-actions {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 32px;
+    width: 100%;
+  }
+
+  .quiz-input {
+    flex: 1;
+  }
+
+  .quiz-btn {
+    min-width: 120px;
+  }
+
+  @media (max-width: 768px) {
+    #main {
+      width: 90vw;
+    }
+
+    .quiz-layout {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 20px;
+    }
+
+    .quiz-question {
+      text-align: center;
+    }
+
+    .quiz-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .quiz-btn {
+      width: 100%;
+    }
   }
 </style>

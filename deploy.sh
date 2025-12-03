@@ -4,7 +4,7 @@
 set -e
 
 # build
-quasar build -m pwa --modern
+yarn build
 
 # navigate into the build output directory
 cd dist/pwa
