@@ -14,5 +14,7 @@ export default {
   wrong: 'Wrong',
   test: 'Test',
   next: 'Next',
-  'enter your answer': 'Enter your answer'
+  'enter your answer': 'Enter your answer',
+  'quiz.correctMessage': 'Correct! Great job!',
+  'quiz.streakCaption': 'You are on a {count}-answer streak!'
 }

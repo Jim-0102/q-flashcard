@@ -98,8 +98,8 @@ export default {
             this.$q.notify({
               type: 'positive',
               position: 'top',
-              message: '答對了！你真聰明！',
-              caption: `目前累積 ${this.winStreak} 連勝！`
+              message: this.$t('quiz.correctMessage'),
+              caption: this.$t('quiz.streakCaption', { count: this.winStreak })
             })
           }
         } else {

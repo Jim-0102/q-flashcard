@@ -14,5 +14,7 @@ export default {
   wrong: '答错了',
   test: '测试',
   next: '下一题',
-  'enter your answer': '输入你的答案'
+  'enter your answer': '输入你的答案',
+  'quiz.correctMessage': '答对了！你真聪明！',
+  'quiz.streakCaption': '目前累计 {count} 连胜！'
 }
