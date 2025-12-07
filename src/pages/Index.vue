@@ -53,7 +53,8 @@ export default {
       n2: 5,
       ans: null,
       s: 0,
-      myAns: null
+      myAns: null,
+      winStreak: 0
     }
   },
   methods: {
@@ -92,7 +93,17 @@ export default {
         if (parseInt(this.myAns) === this.ans) {
           this.s = 1
           this.myAns = null
+          this.winStreak += 1
+          if (this.$q && this.$q.notify) {
+            this.$q.notify({
+              type: 'positive',
+              position: 'top',
+              message: '答對了！你真聰明！',
+              caption: `目前累積 ${this.winStreak} 連勝！`
+            })
+          }
         } else {
+          this.winStreak = 0
           window.alert(this.$t('wrong'))
         }
       } else {
