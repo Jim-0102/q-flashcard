@@ -3,12 +3,23 @@
     <!-- 10連勝大獎 overlay -->
     <transition name="perfect-fade">
       <div v-if="showPerfect" class="perfect-overlay" @click="showPerfect = false">
-        <div class="perfect-box animated zoomIn">
+        <div ref="perfectCapture" class="perfect-box animated zoomIn" @click.stop>
           <div class="perfect-stars">★★★</div>
           <div class="perfect-text">{{ $t('perfect streak') }}</div>
           <div class="perfect-stars">★★★</div>
           <div class="perfect-time">{{ $t('elapsed time', { sec: elapsedTime }) }}</div>
           <div class="perfect-best" v-if="bestRecord !== null">{{ $t('best record', { sec: bestRecord }) }}</div>
+          <q-btn
+            class="perfect-download-btn perfect-download-skip"
+            color="brown-8"
+            outline
+            rounded
+            unelevated
+            icon="download"
+            :loading="perfectDownloadBusy"
+            :label="$t('download perfect png')"
+            @click="downloadPerfectPng"
+          />
         </div>
       </div>
     </transition>
@@ -86,6 +97,8 @@
 </template>
 
 <script>
+import html2canvas from 'html2canvas'
+
 export default {
   name: 'PageIndex',
   props: ['op', 'max1', 'max2', 'mode'],
@@ -100,7 +113,8 @@ export default {
       showPerfect: false,
       streakStartTime: null,
       elapsedTime: null,
-      bestRecord: null
+      bestRecord: null,
+      perfectDownloadBusy: false
     }
   },
   mounted () {
@@ -115,6 +129,55 @@ export default {
     window.removeEventListener('keydown', this.handleKeydown)
   },
   methods: {
+    async downloadPerfectPng () {
+      const el = this.$refs.perfectCapture
+      if (!el || this.perfectDownloadBusy) return
+      this.perfectDownloadBusy = true
+      try {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false,
+          ignoreElements: (node) => {
+            return !!(node.classList && node.classList.contains('perfect-download-skip'))
+          }
+        })
+        await new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('toBlob failed'))
+              return
+            }
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            const sec = this.elapsedTime != null ? String(this.elapsedTime).replace(/\./g, 'p') : 'time'
+            a.href = url
+            a.download = `q-flashcard-perfect-10-${sec}s.png`
+            a.click()
+            URL.revokeObjectURL(url)
+            resolve()
+          }, 'image/png')
+        })
+        if (this.$q && this.$q.notify) {
+          this.$q.notify({
+            type: 'positive',
+            position: 'top',
+            message: this.$t('download perfect png done')
+          })
+        }
+      } catch (e) {
+        if (this.$q && this.$q.notify) {
+          this.$q.notify({
+            type: 'negative',
+            position: 'top',
+            message: this.$t('download perfect png fail')
+          })
+        }
+      } finally {
+        this.perfectDownloadBusy = false
+      }
+    },
     handleKeydown (e) {
       if (this.showPerfect) return
       if (this.mode === 'flashcard') {
@@ -178,11 +241,11 @@ export default {
             }
             this.showPerfect = true
             this.winStreak = 0
-            setTimeout(() => { this.showPerfect = false }, 3000)
           } else if (this.$q && this.$q.notify) {
             this.$q.notify({
               type: 'positive',
               position: 'top',
+              timeout: 500,
               message: this.$t('quiz.correctMessage'),
               caption: this.$t('quiz.streakCaption', { count: this.winStreak })
             })
@@ -452,6 +515,10 @@ export default {
     font-size: 1rem;
     color: #795548;
     margin-top: 6px;
+  }
+
+  .perfect-download-btn {
+    margin-top: 20px;
   }
 
   @media (max-width: 768px) {

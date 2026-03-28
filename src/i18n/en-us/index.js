@@ -24,5 +24,8 @@ export default {
   answer: 'Answer',
   'swipe hint': '← swipe or press Enter for next',
   'elapsed time': 'Time: {sec}s',
-  'best record': 'Best: {sec}s'
+  'best record': 'Best: {sec}s',
+  'download perfect png': 'Save as PNG',
+  'download perfect png done': 'Image saved',
+  'download perfect png fail': 'Could not create image. Please try again.'
 }

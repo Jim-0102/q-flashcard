@@ -24,5 +24,8 @@ export default {
   answer: '答案',
   'swipe hint': '← 左滑或按 Enter 继续',
   'elapsed time': '耗时 {sec} 秒',
-  'best record': '最快记录 {sec} 秒'
+  'best record': '最快记录 {sec} 秒',
+  'download perfect png': '保存为 PNG',
+  'download perfect png done': '图片已下载',
+  'download perfect png fail': '无法生成图片，请重试'
 }
