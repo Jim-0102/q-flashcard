@@ -4,6 +4,7 @@
 export default {
   failed: '失败',
   success: '成功',
+  settings: '设置',
   mode: '模式',
   flashcard: '闪卡',
   quiz: '挑战',
@@ -16,5 +17,12 @@ export default {
   next: '下一题',
   'enter your answer': '输入你的答案',
   'quiz.correctMessage': '答对了！你真聪明！',
-  'quiz.streakCaption': '目前累计 {count} 连胜！'
+  'quiz.streakCaption': '目前累计 {count} 连胜！',
+  'tap to reveal': '点击翻牌',
+  'perfect streak': '完美10连胜！',
+  question: '题目',
+  answer: '答案',
+  'swipe hint': '← 左滑或按 Enter 继续',
+  'elapsed time': '耗时 {sec} 秒',
+  'best record': '最快记录 {sec} 秒'
 }

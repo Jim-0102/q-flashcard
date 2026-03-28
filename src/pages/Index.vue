@@ -1,16 +1,48 @@
 <template>
   <q-page class="flex flex-center">
-    <q-card id = "main" padding v-touch-swipe.mouse="flip" @click="flip()">
-      <q-card-section v-if="mode=='flashcard'">
+    <!-- 10連勝大獎 overlay -->
+    <transition name="perfect-fade">
+      <div v-if="showPerfect" class="perfect-overlay" @click="showPerfect = false">
+        <div class="perfect-box animated zoomIn">
+          <div class="perfect-stars">★★★</div>
+          <div class="perfect-text">{{ $t('perfect streak') }}</div>
+          <div class="perfect-stars">★★★</div>
+          <div class="perfect-time">{{ $t('elapsed time', { sec: elapsedTime }) }}</div>
+          <div class="perfect-best" v-if="bestRecord !== null">{{ $t('best record', { sec: bestRecord }) }}</div>
+        </div>
+      </div>
+    </transition>
+
+    <q-card id="main" :class="{ 'flashcard-bg': mode === 'flashcard' }" padding v-touch-swipe.mouse="handleSwipe" @click="flip()">
+      <q-card-section v-if="mode=='flashcard'" class="flex flex-center column full-height">
+        <div class="face-label">{{ s === 0 ? $t('question') : $t('answer') }}</div>
         <transition-group appear enter-active-class="animated flipInY"
     leave-active-class="animated flipOutY" :duration="500">
-          <h3 :key = "1" v-show="s == 0 && op != '÷' && op != 'gcd'">{{ n1 }} {{ op }} {{ n2 }}</h3>
-          <h3 :key = "2" v-show="s == 0 && op == '÷'">{{ n1 * n2 }} {{ op }} {{ n2 }}</h3>
-          <h3 :key = "3" v-show="s == 0 && op == 'gcd'">gcd({{ n1 }}, {{ n2 }})</h3>
-          <h1 :key = "4" v-show="s == 1">{{ ans }}</h1>
+          <h3 class="question-text" :key="1" v-show="s == 0 && op != '÷' && op != 'gcd'">{{ n1 }} {{ op }} {{ n2 }}</h3>
+          <h3 class="question-text" :key="2" v-show="s == 0 && op == '÷'">{{ n1 * n2 }} {{ op }} {{ n2 }}</h3>
+          <h3 class="question-text" :key="3" v-show="s == 0 && op == 'gcd'">gcd({{ n1 }}, {{ n2 }})</h3>
+          <h1 class="answer-text" :key="4" v-show="s == 1">{{ ans }}</h1>
         </transition-group>
+        <p v-if="s == 0" class="hint">{{ $t('tap to reveal') }}</p>
       </q-card-section>
-      <q-card-section v-if="mode=='quiz'">
+
+      <q-card-section v-if="mode=='quiz'" class="quiz-section">
+        <!-- Progress bar -->
+        <div class="streak-progress-wrap">
+          <q-linear-progress
+            :value="winStreak / 10"
+            color="orange"
+            track-color="orange-1"
+            rounded
+            size="14px"
+            class="streak-progress"
+          />
+          <div class="streak-progress-label">
+            <q-icon name="local_fire_department" size="16px" color="orange" />
+            {{ winStreak }} / 10
+          </div>
+        </div>
+
         <div class="quiz-layout">
           <div class="quiz-question">
             <h3 v-show="s == 0">
@@ -19,20 +51,30 @@
               <span v-else>{{ n1 }} {{ op }} {{ n2 }}</span>
             </h3>
             <h1 v-show="s == 1">{{ ans }}</h1>
+            <p v-if="s == 1" class="swipe-hint">{{ $t('swipe hint') }}</p>
+          </div>
+          <div v-if="winStreak > 0" class="streak-badge">
+            <q-icon name="local_fire_department" size="20px" />
+            <span>{{ winStreak }}</span>
           </div>
           <div class="quiz-actions">
             <q-input
+              ref="answerInput"
               class="quiz-input"
-              :autofocus="true"
               v-show="s === 0"
               v-model="myAns"
               :label="$t('enter your answer')"
+              outlined
+              rounded
+              @keyup.enter.native="test()"
             />
             <q-btn
               class="quiz-btn"
               :size="'xl'"
               color="primary"
               @click="test()"
+              rounded
+              unelevated
             >
               {{ s === 0 ? $t('test') : $t('next') }}
             </q-btn>
@@ -54,10 +96,41 @@ export default {
       ans: null,
       s: 0,
       myAns: null,
-      winStreak: 0
+      winStreak: 0,
+      showPerfect: false,
+      streakStartTime: null,
+      elapsedTime: null,
+      bestRecord: null
     }
   },
+  mounted () {
+    if (this.mode === 'quiz') {
+      this.$nextTick(() => { this.$refs.answerInput && this.$refs.answerInput.focus() })
+    }
+    var stored = localStorage.getItem('q-flashcard-best-streak')
+    if (stored !== null) this.bestRecord = parseFloat(stored)
+    window.addEventListener('keydown', this.handleKeydown)
+  },
+  beforeDestroy () {
+    window.removeEventListener('keydown', this.handleKeydown)
+  },
   methods: {
+    handleKeydown (e) {
+      if (this.showPerfect) return
+      if (this.mode === 'flashcard') {
+        if (['Enter', ' ', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          if (e.key === ' ') e.preventDefault()
+          this.flip()
+        }
+        return
+      }
+      if (this.mode === 'quiz' && this.s === 1) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === ' ') e.preventDefault()
+          this.test()
+        }
+      }
+    },
     gcd (x, y) {
       if ((typeof x !== 'number') || (typeof y !== 'number')) {
         return false
@@ -88,13 +161,25 @@ export default {
         this.ans = this.gcd(this.n1, this.n2)
       }
       if (this.s === 0) {
+        if (this.myAns === null || String(this.myAns).trim() === '') return
         console.log(this.ans)
         console.log(parseInt(this.myAns))
         if (parseInt(this.myAns) === this.ans) {
           this.s = 1
           this.myAns = null
+          if (this.winStreak === 0) this.streakStartTime = Date.now()
           this.winStreak += 1
-          if (this.$q && this.$q.notify) {
+          if (this.winStreak >= 10) {
+            var elapsed = parseFloat(((Date.now() - this.streakStartTime) / 1000).toFixed(1))
+            this.elapsedTime = elapsed
+            if (this.bestRecord === null || elapsed < this.bestRecord) {
+              this.bestRecord = elapsed
+              localStorage.setItem('q-flashcard-best-streak', elapsed)
+            }
+            this.showPerfect = true
+            this.winStreak = 0
+            setTimeout(() => { this.showPerfect = false }, 3000)
+          } else if (this.$q && this.$q.notify) {
             this.$q.notify({
               type: 'positive',
               position: 'top',
@@ -104,12 +189,33 @@ export default {
           }
         } else {
           this.winStreak = 0
-          window.alert(this.$t('wrong'))
+          this.myAns = null
+          this.$q.notify({
+            type: 'negative',
+            position: 'top',
+            message: this.$t('wrong')
+          })
         }
       } else {
         this.s = 0
         this.n1 = Math.floor(Math.random() * this.max1 + 1)
         this.n2 = Math.floor(Math.random() * this.max2 + 1)
+        this.$nextTick(() => { this.$refs.answerInput && this.$refs.answerInput.focus() })
+      }
+    },
+    handleSwipe (details) {
+      var dir = details.direction
+      if (this.mode === 'quiz') {
+        if (this.s === 1 && dir === 'left') {
+          this.test()
+        }
+        return
+      }
+      if (this.s === 0 && (dir === 'left' || dir === 'up')) {
+        this.flip()
+      }
+      if (this.s === 1 && (dir === 'right' || dir === 'down')) {
+        this.flip()
       }
     },
     flip () {
@@ -149,26 +255,121 @@ export default {
     width: 66vw;
     text-align: center;
     max-width: 960px;
+    min-height: 360px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    transition: box-shadow 0.2s, transform 0.1s;
+  }
+
+  #main:active {
+    transform: scale(0.985);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  }
+
+  #main:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  }
+
+  .flashcard-bg {
+    background: linear-gradient(135deg, #e8f4fd 0%, #ffffff 100%);
+  }
+
+  .face-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(0,0,0,0.35);
+    margin-bottom: 8px;
+  }
+
+  .question-text {
+    font-weight: 700;
+    font-size: 2.2rem;
+  }
+
+  .answer-text {
+    color: #2e7d32;
+    font-size: 3.5rem;
+    font-weight: 700;
+  }
+
+  @keyframes pulse-hint {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  .hint {
+    font-size: 1.1rem;
+    color: rgba(0,0,0,0.4);
+    margin-top: 16px;
+    animation: pulse-hint 2.5s ease-in-out infinite;
+  }
+
+  .swipe-hint {
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.35);
+    margin-top: 10px;
+    animation: pulse-hint 2.5s ease-in-out infinite;
+  }
+
+  /* Quiz */
+  .quiz-section {
+    width: 100%;
+  }
+
+  .streak-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .streak-progress {
+    flex: 1;
+  }
+
+  .streak-progress-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e65100;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 2px;
   }
 
   .quiz-layout {
     display: flex;
-    align-items: flex-end;
-    gap: 32px;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
     width: 100%;
   }
 
   .quiz-question {
     min-width: 140px;
-    text-align: left;
+    text-align: center;
+  }
+
+  .streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff3e0;
+    color: #e65100;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 4px 14px;
+    border-radius: 20px;
+    border: 1px solid #ffe0b2;
   }
 
   .quiz-actions {
     display: flex;
     align-items: flex-end;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 16px;
-    margin-top: 32px;
     width: 100%;
   }
 
@@ -178,21 +379,85 @@ export default {
 
   .quiz-btn {
     min-width: 120px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .quiz-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+  }
+
+  .quiz-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  /* 10連勝 overlay */
+  .perfect-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { text-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700; }
+    50% { text-shadow: 0 0 40px #ff6f00, 0 0 80px #ff6f00; }
+  }
+
+  .perfect-box {
+    background: linear-gradient(135deg, #fff9c4, #ffe082, #fff9c4);
+    border: 4px solid #ffd700;
+    border-radius: 24px;
+    padding: 40px 56px;
+    text-align: center;
+    box-shadow: 0 8px 48px rgba(255, 180, 0, 0.6);
+  }
+
+  .perfect-text {
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: #e65100;
+    animation: shimmer 1.2s ease-in-out infinite;
+    margin: 12px 0;
+  }
+
+  .perfect-stars {
+    font-size: 2rem;
+    color: #ffd700;
+    letter-spacing: 8px;
+  }
+
+  .perfect-fade-enter-active,
+  .perfect-fade-leave-active {
+    transition: opacity 0.4s;
+  }
+  .perfect-fade-enter,
+  .perfect-fade-leave-to {
+    opacity: 0;
+  }
+
+  .perfect-time {
+    font-size: 1.2rem;
+    color: #5d4037;
+    margin-top: 16px;
+    font-weight: 600;
+  }
+
+  .perfect-best {
+    font-size: 1rem;
+    color: #795548;
+    margin-top: 6px;
   }
 
   @media (max-width: 768px) {
     #main {
       width: 90vw;
-    }
-
-    .quiz-layout {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 20px;
-    }
-
-    .quiz-question {
-      text-align: center;
+      min-height: 260px;
     }
 
     .quiz-actions {
@@ -203,6 +468,21 @@ export default {
 
     .quiz-btn {
       width: 100%;
+    }
+
+    .perfect-text {
+      font-size: 1.8rem;
+    }
+
+    .perfect-box {
+      padding: 28px 32px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #main {
+      width: 96vw;
+      border-radius: 10px;
     }
   }
 </style>

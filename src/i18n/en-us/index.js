@@ -4,6 +4,7 @@
 export default {
   failed: 'Action failed',
   success: 'Action was successful',
+  settings: 'Settings',
   mode: 'Mode',
   flashcard: 'Flashcard',
   quiz: 'Quiz',
@@ -16,5 +17,12 @@ export default {
   next: 'Next',
   'enter your answer': 'Enter your answer',
   'quiz.correctMessage': 'Correct! Great job!',
-  'quiz.streakCaption': 'You are on a {count}-answer streak!'
+  'quiz.streakCaption': 'You are on a {count}-answer streak!',
+  'tap to reveal': 'tap / click to reveal',
+  'perfect streak': 'Perfect 10 Streak!',
+  question: 'Question',
+  answer: 'Answer',
+  'swipe hint': '← swipe or press Enter for next',
+  'elapsed time': 'Time: {sec}s',
+  'best record': 'Best: {sec}s'
 }
