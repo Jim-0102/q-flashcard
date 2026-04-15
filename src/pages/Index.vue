@@ -106,7 +106,7 @@
             class="streak-progress"
           />
           <div class="streak-progress-label mc-streak-label">
-            <q-icon name="local_fire_department" size="16px" color="deep-purple" />
+            <q-icon name="local_fire_department" size="16px" color="red" />
             {{ winStreak }} / 10
           </div>
         </div>
@@ -124,7 +124,7 @@
 
           <!-- 連勝徽章 -->
           <div v-if="winStreak > 0" class="streak-badge mc-badge">
-            <q-icon name="local_fire_department" size="20px" />
+            <q-icon name="local_fire_department" size="20px" color="red" />
             <span>{{ winStreak }}</span>
           </div>
 
