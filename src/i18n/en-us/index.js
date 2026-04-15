@@ -8,6 +8,7 @@ export default {
   mode: 'Mode',
   flashcard: 'Flashcard',
   quiz: 'Quiz',
+  'multiple-choice': 'Multiple Choice',
   lang: 'Languages',
   method: 'Method',
   max1: 'Max 1',
@@ -27,5 +28,8 @@ export default {
   'best record': 'Best: {sec}s',
   'download perfect png': 'Save as PNG',
   'download perfect png done': 'Image saved',
-  'download perfect png fail': 'Could not create image. Please try again.'
+  'download perfect png fail': 'Could not create image. Please try again.',
+  'choose your answer': 'Choose the correct answer',
+  'mc.correct': 'Correct!',
+  'mc.wrong': 'Wrong! The answer is {ans}'
 }
