@@ -24,7 +24,7 @@
       </div>
     </transition>
 
-    <q-card id="main" :class="{ 'flashcard-bg': mode === 'flashcard' }" padding v-touch-swipe.mouse="handleSwipe" @click="flip()">
+    <q-card id="main" :class="{ 'flashcard-bg': mode === 'flashcard', 'mc-card': mode === 'multiple-choice' }" padding v-touch-swipe.mouse="handleSwipe" @click="mode === 'flashcard' ? flip() : null">
       <q-card-section v-if="mode=='flashcard'" class="flex flex-center column full-height">
         <div class="face-label">{{ s === 0 ? $t('question') : $t('answer') }}</div>
         <transition-group appear enter-active-class="animated flipInY"
@@ -92,6 +92,76 @@
           </div>
         </div>
       </q-card-section>
+
+      <!-- 選擇題模式 -->
+      <q-card-section v-if="mode=='multiple-choice'" class="mc-section" @click.stop>
+        <!-- Progress bar -->
+        <div class="streak-progress-wrap">
+          <q-linear-progress
+            :value="winStreak / 10"
+            color="deep-purple"
+            track-color="deep-purple-1"
+            rounded
+            size="14px"
+            class="streak-progress"
+          />
+          <div class="streak-progress-label mc-streak-label">
+            <q-icon name="local_fire_department" size="16px" color="red" />
+            {{ winStreak }} / 10
+          </div>
+        </div>
+
+        <div class="mc-layout">
+          <!-- 題目 -->
+          <div class="mc-question">
+            <h3>
+              <span v-if="op === '÷'">{{ n1 * n2 }} {{ op }} {{ n2 }}</span>
+              <span v-else-if="op === 'gcd'">gcd({{ n1 }}, {{ n2 }})</span>
+              <span v-else>{{ n1 }} {{ op }} {{ n2 }}</span>
+            </h3>
+            <p class="mc-hint">{{ $t('choose your answer') }}</p>
+          </div>
+
+          <!-- 連勝徽章 -->
+          <div v-if="winStreak > 0" class="streak-badge mc-badge">
+            <q-icon name="local_fire_department" size="20px" color="red" />
+            <span>{{ winStreak }}</span>
+          </div>
+
+          <!-- 四個選項 -->
+          <div class="mc-choices">
+            <q-btn
+              v-for="(choice, idx) in mcChoices"
+              :key="idx"
+              class="mc-choice-btn"
+              :color="mcAnswered ? (choice === ans ? 'positive' : (choice === mcSelected ? 'negative' : 'grey-4')) : 'white'"
+              :text-color="mcAnswered ? (choice === ans ? 'white' : (choice === mcSelected ? 'white' : 'grey-8')) : 'grey-9'"
+              :outline="!mcAnswered"
+              unelevated
+              rounded
+              :disable="mcAnswered"
+              @click="selectMcAnswer(choice)"
+            >
+              <span class="mc-choice-label">{{ choice }}</span>
+              <q-icon v-if="mcAnswered && choice === ans" name="check_circle" class="q-ml-sm" />
+              <q-icon v-if="mcAnswered && choice === mcSelected && choice !== ans" name="cancel" class="q-ml-sm" />
+            </q-btn>
+          </div>
+
+          <!-- 答完之後的下一題按鈕 -->
+          <q-btn
+            v-if="mcAnswered"
+            class="mc-next-btn"
+            color="deep-purple"
+            rounded
+            unelevated
+            size="lg"
+            @click="mcNext()"
+          >
+            {{ $t('next') }}
+          </q-btn>
+        </div>
+      </q-card-section>
     </q-card>
   </q-page>
 </template>
@@ -114,12 +184,19 @@ export default {
       streakStartTime: null,
       elapsedTime: null,
       bestRecord: null,
-      perfectDownloadBusy: false
+      perfectDownloadBusy: false,
+      // 選擇題相關
+      mcChoices: [],
+      mcSelected: null,
+      mcAnswered: false
     }
   },
   mounted () {
     if (this.mode === 'quiz') {
       this.$nextTick(() => { this.$refs.answerInput && this.$refs.answerInput.focus() })
+    }
+    if (this.mode === 'multiple-choice') {
+      this.initMc()
     }
     var stored = localStorage.getItem('q-flashcard-best-streak')
     if (stored !== null) this.bestRecord = parseFloat(stored)
@@ -127,6 +204,17 @@ export default {
   },
   beforeDestroy () {
     window.removeEventListener('keydown', this.handleKeydown)
+  },
+  watch: {
+    mode (newMode) {
+      if (newMode === 'multiple-choice') {
+        this.winStreak = 0
+        this.streakStartTime = null
+        this.n1 = Math.floor(Math.random() * this.max1 + 1)
+        this.n2 = Math.floor(Math.random() * this.max2 + 1)
+        this.initMc()
+      }
+    }
   },
   methods: {
     async downloadPerfectPng () {
@@ -193,6 +281,12 @@ export default {
           this.test()
         }
       }
+      if (this.mode === 'multiple-choice' && this.mcAnswered) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === ' ') e.preventDefault()
+          this.mcNext()
+        }
+      }
     },
     gcd (x, y) {
       if ((typeof x !== 'number') || (typeof y !== 'number')) {
@@ -206,6 +300,82 @@ export default {
         x = t
       }
       return x
+    },
+    calcAns () {
+      if (this.op === '+') return this.n1 + this.n2
+      if (this.op === '-') return this.n1 - this.n2
+      if (this.op === '×') return this.n1 * this.n2
+      if (this.op === '÷') return this.n1
+      if (this.op === 'gcd') return this.gcd(this.n1, this.n2)
+      return 0
+    },
+    generateMcChoices (correctAns) {
+      const choices = new Set()
+      choices.add(correctAns)
+      const spread = Math.max(3, Math.ceil(Math.abs(correctAns) * 0.4))
+      let attempts = 0
+      while (choices.size < 4 && attempts < 200) {
+        attempts++
+        const offset = Math.floor(Math.random() * spread * 2) - spread
+        if (offset === 0) continue
+        choices.add(correctAns + offset)
+      }
+      let extra = 1
+      while (choices.size < 4) {
+        if (!choices.has(correctAns + extra)) choices.add(correctAns + extra)
+        else if (!choices.has(correctAns - extra)) choices.add(correctAns - extra)
+        extra++
+      }
+      return Array.from(choices).sort(() => Math.random() - 0.5)
+    },
+    initMc () {
+      this.ans = this.calcAns()
+      this.mcChoices = this.generateMcChoices(this.ans)
+      this.mcSelected = null
+      this.mcAnswered = false
+    },
+    selectMcAnswer (choice) {
+      if (this.mcAnswered) return
+      this.mcSelected = choice
+      this.mcAnswered = true
+      if (choice === this.ans) {
+        if (this.winStreak === 0) this.streakStartTime = Date.now()
+        this.winStreak += 1
+        if (this.winStreak >= 10) {
+          var elapsed = parseFloat(((Date.now() - this.streakStartTime) / 1000).toFixed(1))
+          this.elapsedTime = elapsed
+          if (this.bestRecord === null || elapsed < this.bestRecord) {
+            this.bestRecord = elapsed
+            localStorage.setItem('q-flashcard-best-streak', elapsed)
+          }
+          this.showPerfect = true
+          this.winStreak = 0
+        } else if (this.$q && this.$q.notify) {
+          this.$q.notify({
+            type: 'positive',
+            position: 'top',
+            timeout: 500,
+            message: this.$t('mc.correct'),
+            caption: this.$t('quiz.streakCaption', { count: this.winStreak })
+          })
+        }
+      } else {
+        this.winStreak = 0
+        this.streakStartTime = null
+        if (this.$q && this.$q.notify) {
+          this.$q.notify({
+            type: 'negative',
+            position: 'top',
+            timeout: 1500,
+            message: this.$t('mc.wrong', { ans: this.ans })
+          })
+        }
+      }
+    },
+    mcNext () {
+      this.n1 = Math.floor(Math.random() * this.max1 + 1)
+      this.n2 = Math.floor(Math.random() * this.max2 + 1)
+      this.initMc()
     },
     test () {
       if (this.op === '+') {
@@ -274,6 +444,12 @@ export default {
         }
         return
       }
+      if (this.mode === 'multiple-choice') {
+        if (this.mcAnswered && dir === 'left') {
+          this.mcNext()
+        }
+        return
+      }
       if (this.s === 0 && (dir === 'left' || dir === 'up')) {
         this.flip()
       }
@@ -335,6 +511,11 @@ export default {
 
   .flashcard-bg {
     background: linear-gradient(135deg, #e8f4fd 0%, #ffffff 100%);
+  }
+
+  .mc-card {
+    background: linear-gradient(135deg, #f3e5f5 0%, #ffffff 100%);
+    cursor: default;
   }
 
   .face-label {
@@ -402,6 +583,10 @@ export default {
     gap: 2px;
   }
 
+  .mc-streak-label {
+    color: #6a1b9a;
+  }
+
   .quiz-layout {
     display: flex;
     flex-direction: column;
@@ -426,6 +611,12 @@ export default {
     padding: 4px 14px;
     border-radius: 20px;
     border: 1px solid #ffe0b2;
+  }
+
+  .mc-badge {
+    background: #f3e5f5;
+    color: #6a1b9a;
+    border-color: #e1bee7;
   }
 
   .quiz-actions {
@@ -453,6 +644,81 @@ export default {
   .quiz-btn:active {
     transform: translateY(0);
     box-shadow: none;
+  }
+
+  /* 選擇題模式 */
+  .mc-section {
+    width: 100%;
+    cursor: default;
+  }
+
+  .mc-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .mc-question {
+    text-align: center;
+  }
+
+  .mc-question h3 {
+    font-weight: 700;
+    font-size: 2.2rem;
+    margin: 0;
+  }
+
+  .mc-hint {
+    font-size: 0.9rem;
+    color: rgba(0,0,0,0.4);
+    margin-top: 6px;
+    animation: pulse-hint 2.5s ease-in-out infinite;
+  }
+
+  .mc-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .mc-choice-btn {
+    width: 100%;
+    font-size: 1.4rem;
+    font-weight: 700;
+    min-height: 64px;
+    border: 2px solid #ce93d8;
+    transition: transform 0.12s, box-shadow 0.12s, background 0.2s;
+  }
+
+  .mc-choice-btn:not([disabled]):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(106, 27, 154, 0.2);
+    border-color: #ab47bc;
+  }
+
+  .mc-choice-btn:not([disabled]):active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .mc-choice-label {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  .mc-next-btn {
+    margin-top: 4px;
+    min-width: 160px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .mc-next-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(106, 27, 154, 0.3);
   }
 
   /* 10連勝 overlay */
@@ -544,12 +810,28 @@ export default {
     .perfect-box {
       padding: 28px 32px;
     }
+
+    .mc-choices {
+      gap: 10px;
+    }
+
+    .mc-choice-btn {
+      min-height: 52px;
+    }
+
+    .mc-choice-label {
+      font-size: 1.2rem;
+    }
   }
 
   @media (max-width: 480px) {
     #main {
       width: 96vw;
       border-radius: 10px;
+    }
+
+    .mc-question h3 {
+      font-size: 1.7rem;
     }
   }
 </style>

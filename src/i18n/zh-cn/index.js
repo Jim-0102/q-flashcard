@@ -8,6 +8,7 @@ export default {
   mode: '模式',
   flashcard: '闪卡',
   quiz: '挑战',
+  'multiple-choice': '选择题',
   lang: '语言',
   method: '算法',
   max1: '第一数上限',
@@ -27,5 +28,8 @@ export default {
   'best record': '最快记录 {sec} 秒',
   'download perfect png': '保存为 PNG',
   'download perfect png done': '图片已下载',
-  'download perfect png fail': '无法生成图片，请重试'
+  'download perfect png fail': '无法生成图片，请重试',
+  'choose your answer': '选择正确答案',
+  'mc.correct': '答对了！',
+  'mc.wrong': '答错了，正确答案是 {ans}'
 }

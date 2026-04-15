@@ -156,6 +156,7 @@ export default {
       ops: ['+', '-', '×', '÷', 'gcd'],
       mode: 'quiz',
       modes: [
+        { label: '選擇題', value: 'multiple-choice' },
         { label: '閃卡', value: 'flashcard' },
         { label: '挑戰', value: 'quiz' }
       ],
